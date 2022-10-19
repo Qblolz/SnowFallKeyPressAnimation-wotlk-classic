@@ -1,119 +1,248 @@
--- locals and speed
-local AddonName, Addon = ...
+local addonName, addon = ...
+addon.addonTitle = GetAddOnMetadata(addonName, "Title")
 
 local _G = _G
-local CreateFrame = CreateFrame
-local hooksecurefunc = hooksecurefunc
+local animations = {}
+local animationNum = 1
+local texture, animationGroup, alpha1, scale1, scale2, rotation2
+local EventFrame = CreateFrame("frame", "EventFrame")
 
-local GetActionButtonForID = GetActionButtonForID
+local textures = {
+    [[Interface\Cooldown\star4]], -- Default White
+    [[Interface\AddOns\SnowfallKeyPressAnimation\Colors\lightbluestar4]], -- Light Blue
+    [[Interface\AddOns\SnowfallKeyPressAnimation\Colors\darkbluestar4]],-- Dark Blue
+    [[Interface\AddOns\SnowfallKeyPressAnimation\Colors\greenstar4]], -- Green
+    [[Interface\AddOns\SnowfallKeyPressAnimation\Colors\purplestar4]], -- Purple
+    [[Interface\AddOns\SnowfallKeyPressAnimation\Colors\pinkstar4]] -- Pink
+}
 
-local TEXTURE_OFFSET = 3
+local textureToASCII = {
+    "White",
+    "Light Blue",
+    "Dark Blue",
+    "Green",
+    "Purple",
+    "Pink"
+}
 
--- main
-function Addon:Load()
-  self.frame = CreateFrame('Frame', nil)
+local function UpdateAnimations()
+    wipe(animations)
+    animationNum = 1
 
-  -- set OnEvent handler
-  self.frame:SetScript('OnEvent', function(_, ...)
-      self:OnEvent(...)
-    end)
+    for i = 1, addon.db.profile.animationCount do
+        local frame = CreateFrame("Frame")
 
-  self.frame:RegisterEvent('PLAYER_LOGIN')
+        texture = frame:CreateTexture()
+
+        texture:SetTexture(textures[addon.db.profile.style])
+
+        texture:SetAlpha(0)
+        texture:SetAllPoints()
+        texture:SetBlendMode("ADD")
+        animationGroup = texture:CreateAnimationGroup()
+
+        alpha1 = animationGroup:CreateAnimation("Alpha")
+        alpha1:SetToAlpha(1)
+        alpha1:SetDuration(0)
+        alpha1:SetOrder(1)
+
+        scale1 = animationGroup:CreateAnimation("Scale")
+        scale1:SetScale(1.7, 1.7)
+        scale1:SetDuration(0)
+        scale1:SetOrder(1)
+
+        scale2 = animationGroup:CreateAnimation("Scale")
+        scale2:SetScale(0, 0)
+        scale2:SetDuration(0.25)
+        scale2:SetOrder(2)
+
+        rotation2 = animationGroup:CreateAnimation("Rotation")
+        rotation2:SetDegrees(90)
+        rotation2:SetDuration(0.25)
+        rotation2:SetOrder(2)
+
+        animations[i] = { frame = frame, animationGroup = animationGroup }
+    end
 end
 
--- frame events
-function Addon:OnEvent(event, ...)
-  local action = self[event]
+addon.defaultSettings = {
+    profile = {
+        animationCount = 5,
+        style = 1,
+    }
+}
 
-  if (action) then
-    action(self, ...)
-  end
+addon.optionsTable = {
+    name = addon.addonTitle,
+    type = "group",
+    args = {
+        break1 = {
+            order = 2,
+            type = "header",
+            name = "",
+        },
+        style = {
+            order = 3,
+            type = "select",
+            name = "Style",
+            values = textureToASCII,
+            get = function()
+                return addon.db.profile.style
+            end,
+            set = function(_, value)
+                addon.db.profile.style = value
+                UpdateAnimations()
+            end,
+        },
+        animationsCount = {
+            order = 4,
+            name = "Count animations",
+            type = "range",
+            min = 3,
+            max = 10,
+            step = 1,
+            get = function()
+                return addon.db.profile.animationCount
+            end,
+            set = function(_, value)
+                addon.db.profile.animationCount = value
+                UpdateAnimations()
+            end,
+        },
+    }
+}
+
+local function animate(button)
+    local animation = animations[animationNum]
+    local frame = animation.frame
+    local _animationGroup = animation.animationGroup
+
+    frame:SetFrameStrata("HIGH")
+    frame:SetFrameLevel(button:GetFrameLevel() + 10)
+    frame:SetAllPoints(button)
+    _animationGroup:Stop()
+    _animationGroup:Play()
+    animationNum = (animationNum % addon.db.profile.animationCount) + 1
+
+    return true
 end
 
-function Addon:PLAYER_LOGIN()
-  self:SetupButtonFlash()
-  self:HookActionEvents()
+local function configButton(name, command)
+    local button = _G[name]
 
-  self.frame:UnregisterEvent('PLAYER_LOGIN')
+    if button ~= nil and not button.hooked then
+        local key = GetBindingKey(command)
+
+        if key then
+            button:RegisterForClicks("AnyDown")
+            SetOverrideBinding(button, true, key, 'CLICK ' .. button:GetName() .. ':LeftButton')
+        end
+
+        button.AnimateThis = animate
+        SecureHandlerWrapScript(button, "OnClick", button, [[ control:CallMethod("AnimateThis", self) ]])
+
+        button.hooked = true
+    end
 end
 
-function Addon:SetupButtonFlash()
-  local frame = CreateFrame('Frame', nil)
-  frame:SetFrameStrata('TOOLTIP')
+local function configDefaultUiPetBar()
+    for i = 1, 10, 1 do
+        local button_command = ("BONUSACTIONBUTTON%d"):format(i)
+        local button_name = ("PetActionButton%d"):format(i)
 
-  local texture = frame:CreateTexture()
-  texture:SetTexture([[Interface\Cooldown\star4]])
-  texture:SetAlpha(0)
-  texture:SetAllPoints(frame)
-  texture:SetBlendMode('ADD')
-  texture:SetDrawLayer('OVERLAY', 7)
-
-  local animation = texture:CreateAnimationGroup()
-
-  local alpha = animation:CreateAnimation('Alpha')
-  alpha:SetFromAlpha(0)
-  alpha:SetToAlpha(1)
-  alpha:SetDuration(0)
-  alpha:SetOrder(1)
-
-  local scale1 = animation:CreateAnimation('Scale')
-  scale1:SetScale(1.5, 1.5)
-  scale1:SetDuration(0)
-  scale1:SetOrder(1)
-
-  local scale2 = animation:CreateAnimation('Scale')
-  scale2:SetScale(0, 0)
-  scale2:SetDuration(.3)
-  scale2:SetOrder(2)
-
-  local rotation = animation:CreateAnimation('Rotation')
-  rotation:SetDegrees(90)
-  rotation:SetDuration(.3)
-  rotation:SetOrder(2)
-
-  self.overlay = frame
-  self.animation = animation
+        configButton(button_name, button_command)
+    end
 end
 
--- hooks
-do
-  local function Button_ActionButtonDown(id)
-    Addon:ActionButtonDown(id)
-  end
+local function configBartenderPetBar()
+    for i = 1, 10, 1 do
+        local button_command = ("BONUSACTIONBUTTON%d"):format(i)
+        local bt4_button_name = ("BT4PetButton%d"):format(i)
 
-  local function Button_MultiActionButtonDown(bar, id)
-    Addon:MultiActionButtonDown(bar, id)
-  end
-
-  function Addon:HookActionEvents()
-    hooksecurefunc('ActionButtonDown', Button_ActionButtonDown)
-    hooksecurefunc('MultiActionButtonDown', Button_MultiActionButtonDown)
-  end
+        configButton(bt4_button_name, button_command)
+    end
 end
 
-function Addon:ActionButtonDown(id)
-  local button = GetActionButtonForID(id)
-  if (button) then
-    self:AnimateButton(button)
-  end
+local function configDefaultUiBarOne()
+    for i = 1, 12, 1 do
+        local button_command = ("ACTIONBUTTON%d"):format(i)
+        local bt4_button_name = ("BT4Button%d"):format(i)
+
+        configButton(bt4_button_name, button_command)
+    end
 end
 
-function Addon:MultiActionButtonDown(bar, id)
-  local button = _G[bar..'Button'..id]
-  if (button) then
-    self:AnimateButton(button)
-  end
+local function configDefaultUiButtons()
+    for i = 1, 12, 1 do
+        local button_commands = {
+            { ("ActionButton%d"):format(i), ("ACTIONBUTTON%d"):format(i) },
+            { ("MultiBarBottomLeftButton%d"):format(i), ("MULTIACTIONBAR1BUTTON%d"):format(i) },
+            { ("MultiBarBottomRightButton%d"):format(i), ("MULTIACTIONBAR2BUTTON%d"):format(i) },
+            { ("MultiBarLeftButton%d"):format(i), ("MULTIACTIONBAR4BUTTON%d"):format(i) },
+            { ("MultiBarRightButton%d"):format(i), ("MULTIACTIONBAR3BUTTON%d"):format(i) }
+        }
+        for j = 1, 5, 1 do
+            configButton(button_commands[j][1], button_commands[j][2])
+        end
+    end
 end
 
-function Addon:AnimateButton(button)
-  if (not button:IsVisible()) then return end
+local function configBartenderButtons()
+    for i = 13, 120, 1 do
+        local button_command = "CLICK BT4Button" .. i .. ":LeftButton"
+        local button_name = ("BT4Button%d"):format(i)
 
-  self.overlay:SetPoint('TOPLEFT', button, 'TOPLEFT', -TEXTURE_OFFSET, TEXTURE_OFFSET)
-  self.overlay:SetPoint('BOTTOMRIGHT', button, 'BOTTOMRIGHT', TEXTURE_OFFSET, -TEXTURE_OFFSET)
-
-  self.animation:Stop()
-  self.animation:Play()
+        configButton(button_name, button_command)
+    end
 end
 
--- begin
-Addon:Load()
+local function configDominosButtons()
+    for i = 1, 60, 1 do
+        local button_command = "CLICK DominosActionButton" .. i .. ":HOTKEY"
+        local button_name = ("DominosActionButton%d"):format(i)
+
+        configButton(button_name, button_command)
+    end
+end
+
+local function init()
+    local bartender_loaded = IsAddOnLoaded("Bartender4")
+    local dominos_loaded = IsAddOnLoaded("Dominos")
+
+    if bartender_loaded and dominos_loaded then
+        print("Bartender4 and Dominos loaded, stopping sKeyPress")
+        return
+    end
+
+    if bartender_loaded then
+        configDefaultUiBarOne()
+        configBartenderButtons()
+        configBartenderPetBar()
+    elseif dominos_loaded then
+        configDefaultUiButtons()
+        configDefaultUiPetBar()
+        configDominosButtons()
+    else
+        configDefaultUiButtons()
+        configDefaultUiPetBar()
+    end
+end
+
+local function OnEvent(self, event, ...)
+    if event == "ADDON_LOADED" then
+        if ... ~= addonName then return end
+
+        addon.db = LibStub("AceDB-3.0"):New(addonName.."DB", addon.defaultSettings, true)
+        addon.optionsTable.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(addon.db)
+
+        LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, addon.optionsTable)
+        LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, addon.addonTitle)
+        LibStub("AceConfigDialog-3.0"):SetDefaultSize(addonName, 650, 500)
+
+        UpdateAnimations()
+        init()
+    end
+end
+
+EventFrame:SetScript("OnEvent", OnEvent)
+EventFrame:RegisterEvent("ADDON_LOADED")

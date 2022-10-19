@@ -1,5 +1,15 @@
 ## Interface: 30300
 ## Title: SnowfallKeyPressAnimation
 ## Notes: Modify key bindings to work on key press rather than key release
-## SavedVariables: SnowfallKeyPressSV
+## SavedVariables: SnowfallKeyPressAnimationDB
+## OptionalDeps: LibStub, CallbackHandler-1.0, Ace3, LibSharedMedia-3.0
+## X-Embeds: LibStub, CallbackHandler-1.0, AceDB-3.0, LibDualSpec-1.0, LibSharedMedia-3.0
+
+#@no-lib-strip@
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\AceDB-3.0\AceDB-3.0.xml
+Libs\LibSharedMedia-3.0\lib.xml
+#@end-no-lib-strip@
+
 SnowfallKeyPress.lua
