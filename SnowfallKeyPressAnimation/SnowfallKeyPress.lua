@@ -228,16 +228,19 @@ local function init()
     end
 end
 
+local addon_loaded = false
+
 local function OnEvent(self, event, ...)
     if event == "PLAYER_ENTERING_WORLD" then
 
         addon.db = LibStub("AceDB-3.0"):New(addonName.."DB", addon.defaultSettings, true)
         addon.optionsTable.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(addon.db)
 
-        LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, addon.optionsTable)
-        LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, addon.addonTitle)
-        LibStub("AceConfigDialog-3.0"):SetDefaultSize(addonName, 650, 500)
-
+        if addon_loaded == false then
+            LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, addon.optionsTable)
+            LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, addon.addonTitle)
+            LibStub("AceConfigDialog-3.0"):SetDefaultSize(addonName, 650, 500)
+        end
         UpdateAnimations()
         init()
     end
