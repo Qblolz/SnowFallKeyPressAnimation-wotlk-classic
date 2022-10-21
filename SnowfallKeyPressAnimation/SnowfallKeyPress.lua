@@ -229,8 +229,7 @@ local function init()
 end
 
 local function OnEvent(self, event, ...)
-    if event == "ADDON_LOADED" then
-        if ... ~= addonName then return end
+    if event == "PLAYER_ENTERING_WORLD" then
 
         addon.db = LibStub("AceDB-3.0"):New(addonName.."DB", addon.defaultSettings, true)
         addon.optionsTable.args.profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(addon.db)
@@ -245,4 +244,4 @@ local function OnEvent(self, event, ...)
 end
 
 EventFrame:SetScript("OnEvent", OnEvent)
-EventFrame:RegisterEvent("ADDON_LOADED")
+EventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
