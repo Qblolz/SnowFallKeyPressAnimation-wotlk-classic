@@ -240,6 +240,7 @@ local function OnEvent(self, event, ...)
             LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, addon.optionsTable)
             LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, addon.addonTitle)
             LibStub("AceConfigDialog-3.0"):SetDefaultSize(addonName, 650, 500)
+            addon_loaded = true
         end
         UpdateAnimations()
         init()
