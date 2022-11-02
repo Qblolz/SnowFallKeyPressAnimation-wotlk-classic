@@ -117,12 +117,14 @@ local function animate(button)
     local frame = animation.frame
     local _animationGroup = animation.animationGroup
 
-    frame:SetFrameStrata("HIGH")
-    frame:SetFrameLevel(button:GetFrameLevel() + 10)
-    frame:SetAllPoints(button)
-    _animationGroup:Stop()
-    _animationGroup:Play()
-    animationNum = (animationNum % addon.db.profile.animationCount) + 1
+    if (button:IsShown()) then
+        frame:SetFrameStrata("HIGH")
+        frame:SetFrameLevel(button:GetFrameLevel() + 10)
+        frame:SetAllPoints(button)
+        _animationGroup:Stop()
+        _animationGroup:Play()
+        animationNum = (animationNum % addon.db.profile.animationCount) + 1
+    end
 
     return true
 end
